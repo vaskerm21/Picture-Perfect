@@ -58,9 +58,36 @@ const packages: PackageData[] = [
   }
 ];
 
+// Generate upcoming dates for the date picker
+const generateUpcomingDates = () => {
+  const dates = [];
+  const today = new Date();
+  for (let i = 0; i < 14; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    dates.push({
+      date: date,
+      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayNumber: date.getDate(),
+      fullDate: date.toISOString().split('T')[0]
+    });
+  }
+  return dates;
+};
+
+// Available time slots
+const timeSlots = [
+  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM",
+  "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM",
+  "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"
+];
+
 export default function BookingSection() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPackage, setSelectedPackage] = useState<PackageData>(packages[1]);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [formData, setFormData] = useState({
     customerName: "",
     customerEmail: "",
@@ -88,6 +115,8 @@ export default function BookingSection() {
       });
       // Reset form
       setCurrentStep(1);
+      setSelectedDate("");
+      setSelectedTime("");
       setFormData({
         customerName: "",
         customerEmail: "",
@@ -126,6 +155,19 @@ export default function BookingSection() {
 
     return () => observer.disconnect();
   }, []);
+
+  // Sync selected date and time with form data
+  useEffect(() => {
+    if (selectedDate) {
+      setFormData(prev => ({ ...prev, eventDate: selectedDate }));
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (selectedTime) {
+      setFormData(prev => ({ ...prev, eventTime: selectedTime }));
+    }
+  }, [selectedTime]);
 
   const nextStep = () => {
     if (currentStep < 3) {
@@ -189,8 +231,8 @@ export default function BookingSection() {
           </div>
           <div className="flex justify-center space-x-16 text-sm text-gray-600">
             <span className={currentStep === 1 ? 'font-medium text-navy' : ''}>Package</span>
-            <span className={currentStep === 2 ? 'font-medium text-navy' : ''}>Details</span>
-            <span className={currentStep === 3 ? 'font-medium text-navy' : ''}>Payment</span>
+            <span className={currentStep === 2 ? 'font-medium text-navy' : ''}>Date & Time</span>
+            <span className={currentStep === 3 ? 'font-medium text-navy' : ''}>Booking Details</span>
           </div>
         </div>
 
@@ -240,31 +282,61 @@ export default function BookingSection() {
 
         {/* Step 2: Event Details */}
         {currentStep === 2 && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <Card className="bg-cream">
               <CardContent className="p-8">
-                <h3 className="font-display text-2xl font-semibold text-navy mb-6 text-center">Event Details</h3>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="eventDate" className="text-sm font-medium text-gray-700 mb-2">Event Date</Label>
-                      <Input 
-                        id="eventDate"
-                        type="date" 
-                        value={formData.eventDate}
-                        onChange={(e) => updateFormData('eventDate', e.target.value)}
-                        className="w-full"
-                      />
+                <h3 className="font-display text-2xl font-semibold text-navy mb-6 text-center">Date and Time</h3>
+                <div className="space-y-8">
+                  
+                  {/* Date Selection */}
+                  <div>
+                    <p className="text-center text-lg text-gray-600 mb-6">
+                      {selectedDate ? 
+                        new Date(selectedDate).toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        }) : 
+                        'Select your event date'
+                      }
+                    </p>
+                    <div className="flex overflow-x-auto gap-3 pb-2">
+                      {generateUpcomingDates().map((dateItem, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedDate(dateItem.fullDate)}
+                          className={`flex-shrink-0 w-16 h-20 rounded-lg border-2 flex flex-col items-center justify-center transition-all hover:border-primary ${
+                            selectedDate === dateItem.fullDate
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-gray-300 hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-sm text-gray-600">{dateItem.dayName}</span>
+                          <span className="text-xl font-semibold">{dateItem.dayNumber}</span>
+                        </button>
+                      ))}
                     </div>
-                    <div>
-                      <Label htmlFor="eventTime" className="text-sm font-medium text-gray-700 mb-2">Event Time</Label>
-                      <Input 
-                        id="eventTime"
-                        type="time" 
-                        value={formData.eventTime}
-                        onChange={(e) => updateFormData('eventTime', e.target.value)}
-                        className="w-full"
-                      />
+                  </div>
+
+                  {/* Time Selection */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Choose a time:</h4>
+                    <p className="text-gray-600 mb-6">The event should take about {selectedPackage.type.split('-')[0]} hours.</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {timeSlots.map((time, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedTime(time)}
+                          className={`p-4 rounded-lg border-2 text-center transition-all hover:border-primary ${
+                            selectedTime === time
+                              ? 'border-primary bg-primary/10 text-primary font-semibold'
+                              : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                          }`}
+                        >
+                          {time}
+                        </button>
+                      ))}
                     </div>
                   </div>
                   <div>
@@ -306,15 +378,17 @@ export default function BookingSection() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex justify-between">
+                  {/* Continue Button */}
+                  <div className="flex justify-between pt-6">
                     <Button variant="outline" onClick={previousStep}>
                       Previous
                     </Button>
                     <Button 
-                      className="bg-gold text-navy hover:bg-yellow-600"
+                      className="bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
                       onClick={nextStep}
+                      disabled={!selectedDate || !selectedTime}
                     >
-                      Continue to Payment
+                      Continue
                     </Button>
                   </div>
                 </div>
@@ -323,37 +397,86 @@ export default function BookingSection() {
           </div>
         )}
 
-        {/* Step 3: Payment & Contact */}
+        {/* Step 3: Booking Details & Payment */}
         {currentStep === 3 && (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <Card className="bg-cream">
               <CardContent className="p-8">
-                <h3 className="font-display text-2xl font-semibold text-navy mb-6 text-center">Payment & Contact</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <h3 className="font-display text-2xl font-semibold text-navy mb-6 text-center">Booking Details</h3>
+                
+                <div className="space-y-8">
+                  {/* Event Details */}
                   <div>
-                    <h4 className="font-semibold text-lg mb-4">Contact Information</h4>
-                    <div className="space-y-4">
+                    <h4 className="font-semibold text-lg mb-4 text-gray-800">Event Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 mb-2">Event Type</Label>
+                        <Select onValueChange={(value) => updateFormData('eventType', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select event type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="wedding">Wedding</SelectItem>
+                            <SelectItem value="corporate">Corporate Event</SelectItem>
+                            <SelectItem value="birthday">Birthday Party</SelectItem>
+                            <SelectItem value="anniversary">Anniversary</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 mb-2">Number of Guests</Label>
+                        <Select onValueChange={(value) => updateFormData('numberOfGuests', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select number of guests" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="25-50">25-50</SelectItem>
+                            <SelectItem value="50-100">50-100</SelectItem>
+                            <SelectItem value="100-200">100-200</SelectItem>
+                            <SelectItem value="200+">200+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Label htmlFor="venueAddress" className="text-sm font-medium text-gray-700 mb-2">Venue Address</Label>
                       <Input 
-                        placeholder="Full Name" 
-                        value={formData.customerName}
-                        onChange={(e) => updateFormData('customerName', e.target.value)}
-                      />
-                      <Input 
-                        type="email" 
-                        placeholder="Email Address" 
-                        value={formData.customerEmail}
-                        onChange={(e) => updateFormData('customerEmail', e.target.value)}
-                      />
-                      <Input 
-                        type="tel" 
-                        placeholder="Phone Number" 
-                        value={formData.customerPhone}
-                        onChange={(e) => updateFormData('customerPhone', e.target.value)}
+                        id="venueAddress"
+                        placeholder="Enter event venue address" 
+                        value={formData.venueAddress}
+                        onChange={(e) => updateFormData('venueAddress', e.target.value)}
+                        className="w-full"
                       />
                     </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-lg mb-4">Payment Method</h4>
+
+                  {/* Contact & Payment */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <h4 className="font-semibold text-lg mb-4">Contact Information</h4>
+                      <div className="space-y-4">
+                        <Input 
+                          placeholder="Full Name" 
+                          value={formData.customerName}
+                          onChange={(e) => updateFormData('customerName', e.target.value)}
+                        />
+                        <Input 
+                          type="email" 
+                          placeholder="Email Address" 
+                          value={formData.customerEmail}
+                          onChange={(e) => updateFormData('customerEmail', e.target.value)}
+                        />
+                        <Input 
+                          type="tel" 
+                          placeholder="Phone Number" 
+                          value={formData.customerPhone}
+                          onChange={(e) => updateFormData('customerPhone', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-lg mb-4">Payment Method</h4>
                     <RadioGroup 
                       value={formData.paymentMethod} 
                       onValueChange={(value) => updateFormData('paymentMethod', value)}
@@ -388,6 +511,7 @@ export default function BookingSection() {
                         </label>
                       </div>
                     </RadioGroup>
+                    </div>
                   </div>
                 </div>
                 
